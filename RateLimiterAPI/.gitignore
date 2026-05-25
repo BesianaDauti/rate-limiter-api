@@ -1,0 +1,31 @@
+# Build
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+.vscode/
+
+# Rider
+.idea/
+
+# Logs
+*.log
+
+# Environment
+.env
+
+# Publish
+publish/
+
+# EF
+Migrations/*.Designer.cs
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+appsettings.Development.json
