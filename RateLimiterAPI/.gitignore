@@ -29,3 +29,5 @@ Thumbs.db
 
 # Secrets
 appsettings.Development.json
+
+*.zip
