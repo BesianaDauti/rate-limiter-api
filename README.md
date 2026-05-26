@@ -859,7 +859,7 @@ All generated code was reviewed, tested, and adapted for the specific requiremen
 
 ## License
 
-This project was developed as a coursework submission for the **Cloud Computing** course at **Universiteti AAB**, 2026.
+This project was developed as a coursework submission for the **Cloud Computing** course at **AAB College**, 2026.
 
 ---
 
