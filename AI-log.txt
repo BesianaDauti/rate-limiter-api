@@ -1,0 +1,18 @@
+AI Assistance Log — RateLimiter Pro
+
+This project was primarily designed, implemented, tested, and deployed manually by the author.
+
+AI tools (ChatGPT & Claude) were used as development assistants for:
+
+- Debugging middleware issues
+- Troubleshooting AWS deployment problems
+- Reviewing architecture decisions
+- Generating boilerplate DTOs and service structures
+- Explaining Entity Framework Core migration issues
+- Suggesting UI/UX improvements
+- Assisting with SignalR real-time communication setup
+- Helping optimize abuse detection logic
+
+All generated suggestions were reviewed, modified, tested, and integrated manually into the project.
+
+Author: Besiana Dauti
