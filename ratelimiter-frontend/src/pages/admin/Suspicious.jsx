@@ -21,7 +21,13 @@ function Suspicious() {
   }, [fetchActivities]);
 
   const handleResetRisk = async (userId, fullName) => {
+    if (!userId) {
+      setError("User ID missing");
+      return;
+    }
+
     if (!window.confirm(`Reset risk score for ${fullName}?`)) return;
+
     try {
       await api.put(`/admin/users/${userId}/reset-risk`);
       setSuccess(`Risk score reset for ${fullName}.`);
@@ -181,8 +187,8 @@ function Suspicious() {
                           <button
                             onClick={() =>
                               handleResetRisk(
-                                activity.user.id,
-                                activity.user.fullName,
+                                activity.userId ?? activity.user?.id,
+                                activity.user?.fullName ?? "User",
                               )
                             }
                             style={styles.resetBtn}

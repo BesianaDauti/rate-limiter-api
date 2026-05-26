@@ -1,33 +1,58 @@
+# =========================
 # Build
+# =========================
 bin/
 obj/
 
-# Visual Studio
+# =========================
+# Visual Studio / Rider
+# =========================
 .vs/
-*.user
-*.suo
 .vscode/
-
-# Rider
 .idea/
 
+# =========================
+# User files
+# =========================
+*.user
+*.suo
+*.rsuser
+
+# =========================
 # Logs
+# =========================
 *.log
+logs/
 
-# Environment
+# =========================
+# Environment / Secrets
+# =========================
 .env
+*.env
 
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+# =========================
 # Publish
+# =========================
 publish/
 
-# EF
+# =========================
+# Entity Framework
+# =========================
 Migrations/*.Designer.cs
 
-# OS
+# =========================
+# Archives
+# =========================
+*.zip
+*.rar
+*.7z
+
+# =========================
+# OS Files
+# =========================
 .DS_Store
 Thumbs.db
-
-# Secrets
-appsettings.Development.json
-
-*.zip

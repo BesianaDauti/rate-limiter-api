@@ -16,11 +16,14 @@ namespace RateLimiterApi.Controllers
     {
         private readonly RateLimitService _rateLimitService;
         private readonly AppDbContext _context;
+        private readonly AbuseDetectionService _abuseDetectionService;
 
-        public ApiController(RateLimitService rateLimitService, AppDbContext context)
+        public ApiController(RateLimitService rateLimitService, AppDbContext context,
+        AbuseDetectionService abuseDetectionService)
         {
             _rateLimitService = rateLimitService;
             _context = context;
+            _abuseDetectionService = abuseDetectionService;
         }
 
         [HttpGet("status")]
@@ -165,6 +168,17 @@ namespace RateLimiterApi.Controllers
                     : 0,
                 topEndpoints
             }));
+        }
+
+        [HttpGet("risk-score")]
+        [Authorize]
+        public async Task<IActionResult> GetRiskScore()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            var riskScore = await _abuseDetectionService.GetUserRiskScoreAsync(userId);
+
+            return Ok(ApiResponseDto<int>.Ok(riskScore));
         }
     }
 }

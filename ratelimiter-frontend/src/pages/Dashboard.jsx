@@ -22,16 +22,14 @@ function Dashboard() {
       const response = await api.get("/data/status");
       setStatus(response.data.data);
       setCountdown(response.data.data.resetInSeconds);
-    } catch {
-    }
+    } catch {}
   }, []);
 
   const fetchRiskScore = useCallback(async () => {
     try {
       const response = await api.get("/data/risk-score");
       setRiskScore(response.data.data);
-    } catch {
-    }
+    } catch {}
   }, []);
 
   const startPolling = useCallback(() => {
@@ -49,7 +47,7 @@ function Dashboard() {
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(
         "http://ratelimiterapi-env.eba-ppdfdmbw.eu-north-1.elasticbeanstalk.com/hubs/dashboard",
-        { accessTokenFactory: () => token }
+        { accessTokenFactory: () => token },
       )
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)
@@ -68,7 +66,8 @@ function Dashboard() {
       setRiskScore(score);
     });
 
-    connection.start()
+    connection
+      .start()
       .then(() => {
         setConnected(true);
         connection.invoke("JoinUserGroup", userId);
@@ -86,7 +85,9 @@ function Dashboard() {
       if (connectionRef.current) {
         try {
           connectionRef.current.invoke("LeaveUserGroup", userId);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         connectionRef.current.stop();
       }
     };
@@ -103,10 +104,13 @@ function Dashboard() {
     setLoading(true);
     setTestResult(null);
     setError("");
+
     try {
       const response = await api.get("/data/test");
       setTestResult(response.data.data);
+
       fetchStatus();
+      fetchRiskScore();
     } catch (err) {
       if (err.response?.status === 429) {
         const reset = err.response?.data?.resetInSeconds;
@@ -114,6 +118,8 @@ function Dashboard() {
       } else {
         setError(err.response?.data?.message || "Request failed.");
       }
+
+      fetchRiskScore();
     } finally {
       setLoading(false);
     }
@@ -138,21 +144,27 @@ function Dashboard() {
     <div style={styles.container}>
       <Navbar />
       <div style={styles.content}>
-
         <div style={styles.header}>
           <h2 style={styles.title}>Welcome, {fullName}!</h2>
-          <div style={{
-            ...styles.connectionBadge,
-            backgroundColor: connected
-              ? "rgba(34,197,94,0.15)"
-              : "rgba(100,116,139,0.15)",
-            border: `1px solid ${connected ? "rgba(34,197,94,0.3)" : "rgba(100,116,139,0.3)"}`
-          }}>
-            <span style={{
-              width: "8px", height: "8px", borderRadius: "50%",
-              backgroundColor: connected ? "#22c55e" : "#94a3b8",
-              display: "inline-block", marginRight: "8px"
-            }} />
+          <div
+            style={{
+              ...styles.connectionBadge,
+              backgroundColor: connected
+                ? "rgba(34,197,94,0.15)"
+                : "rgba(100,116,139,0.15)",
+              border: `1px solid ${connected ? "rgba(34,197,94,0.3)" : "rgba(100,116,139,0.3)"}`,
+            }}
+          >
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                backgroundColor: connected ? "#22c55e" : "#94a3b8",
+                display: "inline-block",
+                marginRight: "8px",
+              }}
+            />
             {connected ? "Live" : "Polling"}
           </div>
         </div>
@@ -165,11 +177,13 @@ function Dashboard() {
               style={styles.card}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-8px)";
-                e.currentTarget.style.boxShadow = "0 25px 60px rgba(0,0,0,0.35)";
+                e.currentTarget.style.boxShadow =
+                  "0 25px 60px rgba(0,0,0,0.35)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 15px 40px rgba(0,0,0,0.22)";
+                e.currentTarget.style.boxShadow =
+                  "0 15px 40px rgba(0,0,0,0.22)";
               }}
             >
               <h3 style={styles.cardTitle}>Remaining Requests</h3>
@@ -178,11 +192,13 @@ function Dashboard() {
               </p>
               <p style={styles.cardSub}>per minute</p>
               <div style={styles.progressBg}>
-                <div style={{
-                  ...styles.progressFill,
-                  width: `${Math.min(status.remainingRequests, 100)}%`,
-                  backgroundColor: getRemainingColor()
-                }} />
+                <div
+                  style={{
+                    ...styles.progressFill,
+                    width: `${Math.min(status.remainingRequests, 100)}%`,
+                    backgroundColor: getRemainingColor(),
+                  }}
+                />
               </div>
             </div>
 
@@ -190,11 +206,13 @@ function Dashboard() {
               style={styles.card}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-8px)";
-                e.currentTarget.style.boxShadow = "0 25px 60px rgba(0,0,0,0.35)";
+                e.currentTarget.style.boxShadow =
+                  "0 25px 60px rgba(0,0,0,0.35)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 15px 40px rgba(0,0,0,0.22)";
+                e.currentTarget.style.boxShadow =
+                  "0 15px 40px rgba(0,0,0,0.22)";
               }}
             >
               <h3 style={styles.cardTitle}>Reset In</h3>
@@ -203,11 +221,13 @@ function Dashboard() {
               </p>
               <p style={styles.cardSub}>seconds</p>
               <div style={styles.progressBg}>
-                <div style={{
-                  ...styles.progressFill,
-                  width: `${(countdown / 60) * 100}%`,
-                  backgroundColor: "#38bdf8"
-                }} />
+                <div
+                  style={{
+                    ...styles.progressFill,
+                    width: `${(countdown / 60) * 100}%`,
+                    backgroundColor: "#38bdf8",
+                  }}
+                />
               </div>
             </div>
 
@@ -215,16 +235,24 @@ function Dashboard() {
               style={styles.card}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-8px)";
-                e.currentTarget.style.boxShadow = "0 25px 60px rgba(0,0,0,0.35)";
+                e.currentTarget.style.boxShadow =
+                  "0 25px 60px rgba(0,0,0,0.35)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 15px 40px rgba(0,0,0,0.22)";
+                e.currentTarget.style.boxShadow =
+                  "0 15px 40px rgba(0,0,0,0.22)";
               }}
             >
               <h3 style={styles.cardTitle}>API Status</h3>
-              <p style={{ ...styles.cardValue, color: "#22c55e", fontSize: "1.4rem" }}>
-                Active ✅
+              <p
+                style={{
+                  ...styles.cardValue,
+                  color: "#22c55e",
+                  fontSize: "1.4rem",
+                }}
+              >
+                {status ? "Healthy" : "Unavailable"}
               </p>
               <p style={styles.cardSub}>{status.message}</p>
             </div>
@@ -233,11 +261,13 @@ function Dashboard() {
               style={styles.card}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-8px)";
-                e.currentTarget.style.boxShadow = "0 25px 60px rgba(0,0,0,0.35)";
+                e.currentTarget.style.boxShadow =
+                  "0 25px 60px rgba(0,0,0,0.35)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 15px 40px rgba(0,0,0,0.22)";
+                e.currentTarget.style.boxShadow =
+                  "0 15px 40px rgba(0,0,0,0.22)";
               }}
             >
               <h3 style={styles.cardTitle}>Risk Score</h3>
@@ -245,16 +275,22 @@ function Dashboard() {
                 {riskScore}/100
               </p>
               <p style={styles.cardSub}>
-                {riskScore >= 80 ? "🚫 Critical" :
-                 riskScore >= 50 ? "⚠️ High Risk" :
-                 riskScore >= 25 ? "⚡ Medium" : "✅ Safe"}
+                {riskScore >= 80
+                  ? "🚫 Critical"
+                  : riskScore >= 50
+                    ? "⚠️ High Risk"
+                    : riskScore >= 25
+                      ? "⚡ Medium"
+                      : "✅ Safe"}
               </p>
               <div style={styles.progressBg}>
-                <div style={{
-                  ...styles.progressFill,
-                  width: `${riskScore}%`,
-                  backgroundColor: getRiskColor()
-                }} />
+                <div
+                  style={{
+                    ...styles.progressFill,
+                    width: `${riskScore}%`,
+                    backgroundColor: getRiskColor(),
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -263,7 +299,8 @@ function Dashboard() {
         <div style={styles.textSection}>
           <h3 style={styles.sectionTitle}>Test API Request</h3>
           <p style={styles.sectionDesc}>
-            Click the button below to send a test request and see rate limiting in action.
+            Click the button below to send a test request and see rate limiting
+            in action.
           </p>
           <button
             onClick={handleTestRequest}
@@ -271,11 +308,13 @@ function Dashboard() {
             disabled={loading}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-              e.currentTarget.style.boxShadow = "0 22px 45px rgba(31,125,83,0.45)";
+              e.currentTarget.style.boxShadow =
+                "0 22px 45px rgba(31,125,83,0.45)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0) scale(1)";
-              e.currentTarget.style.boxShadow = "0 15px 35px rgba(31,125,83,0.35)";
+              e.currentTarget.style.boxShadow =
+                "0 15px 35px rgba(31,125,83,0.35)";
             }}
           >
             {loading ? "Sending..." : "Send Test Request"}
@@ -283,10 +322,19 @@ function Dashboard() {
 
           {testResult && (
             <div style={styles.result}>
-              <p><strong>Message:</strong> {testResult.message}</p>
-              <p><strong>Email:</strong> {testResult.email}</p>
-              <p><strong>Role:</strong> {testResult.role}</p>
-              <p><strong>Time:</strong> {new Date(testResult.timestamp).toLocaleTimeString()}</p>
+              <p>
+                <strong>Message:</strong> {testResult.message}
+              </p>
+              <p>
+                <strong>Email:</strong> {testResult.email}
+              </p>
+              <p>
+                <strong>Role:</strong> {testResult.role}
+              </p>
+              <p>
+                <strong>Time:</strong>{" "}
+                {new Date(testResult.timestamp).toLocaleTimeString()}
+              </p>
             </div>
           )}
         </div>
