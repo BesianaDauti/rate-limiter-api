@@ -714,25 +714,56 @@ Enable **Static Website Hosting** on the S3 bucket with `index.html` as both the
 
 ## Todo App Demo
 
-The `/todo-app` folder contains a standalone React application that demonstrates how **any developer can integrate RateLimiter Pro** into their own project using only an API Key.
+The `/todo-app` folder contains a standalone React application that demonstrates how external applications can integrate with **RateLimiter Pro** using only an API Key.
 
-### How it works
+The Todo App simulates a real third-party client application that consumes protected API endpoints through the RateLimiter Pro platform.
 
+Unlike the main platform, the Todo App does not require authentication, JWT tokens, or a backend server. All API protection, request validation, rate limiting, and abuse detection are handled entirely by RateLimiter Pro.
+
+---
+
+### Integration Flow
+
+```text
+User opens Todo App
+       ↓
+Developer inserts personal API Key inside App.jsx
+       ↓
+const API_KEY = "YOUR_RATELIMITER_API_KEY"
+       ↓
+User adds a todo item
+       ↓
+Todo App sends GET /api/data/test request
+       ↓
+RateLimiter Pro validates API Key
+       ↓
+Request is logged and counted
+       ↓
+Dashboard updates in real-time via SignalR
+       ↓
+Remaining requests decrease live
+       ↓
+If limit exceeded → HTTP 429 returned
 ```
-User visits Todo App
-       ↓
-Enters API Key: rl_live_xxxx
-       ↓
-API Key validated against RateLimiter Pro
-       ↓
-Each todo added = 1 GET /api/data/test request
-       ↓
-Remaining counter decreases in real-time
-       ↓
-After 100 requests → 429 error with countdown
-       ↓
-Admin sees all requests in logs panel
-```
+
+---
+
+### Real-Time Monitoring
+
+Every request made from the Todo App is instantly visible inside the RateLimiter Pro dashboard.
+
+The platform updates in real time using SignalR and displays:
+
+- Remaining requests
+- Reset countdown timer
+- API activity status
+- Request logs
+- Abuse detection activity
+- Risk score updates
+
+This demonstrates how external applications can integrate with RateLimiter Pro while administrators monitor traffic live from the dashboard.
+
+---
 
 ### Running the Todo App
 
@@ -742,10 +773,42 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5174`, enter your API key from RateLimiter Pro, and start adding todos.
+The application will run on:
 
-> The Todo App itself has no backend. All rate limiting is handled entirely by RateLimiter Pro through the API key.
+```text
+http://localhost:5173
+```
 
+---
+
+### API Key Configuration
+
+Inside `App.jsx`, the developer must insert their personal API key generated from RateLimiter Pro.
+
+```javascript
+const API_KEY = "YOUR_RATELIMITER_API_KEY".trim();
+```
+
+Example:
+
+```javascript
+const API_KEY = "rl_live_xxxxxxxxxxxxxxxxx".trim();
+```
+
+The API key can be generated from the **API Keys** section inside the RateLimiter Pro.
+
+---
+
+### Important Notes
+
+- The Todo App has no backend server
+- No login or registration is required
+- Every todo added represents one real API request
+- All rate limiting logic is handled by RateLimiter Pro
+- Requests are monitored live inside the dashboard
+- HTTP 429 responses are returned automatically when limits are exceeded
+
+This demo application was created to simulate how developers could integrate RateLimiter Pro into their own applications with minimal setup.
 ---
 
 ## Project Structure

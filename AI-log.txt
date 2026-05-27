@@ -1,18 +1,464 @@
-AI Assistance Log — RateLimiter Pro
+AI-LOG.TXT - RateLimiter Pro
+API Rate Limiting and Abuse Protection
+AI Tools:
+- Claude (Anthropic) - claude.ai
+- ChatGPT (OpenAI) - chatgpt.com
 
-This project was primarily designed, implemented, tested, and deployed manually by the author.
+This file documents all AI-assisted interactions during the development of
+RateLimiter Pro. Each entry describes the prompt given, the output received,
+and how it was used or modified in the final project.
 
-AI tools (ChatGPT & Claude) were used as development assistants for:
+SUMMARY
 
-- Debugging middleware issues
-- Troubleshooting AWS deployment problems
-- Reviewing architecture decisions
-- Generating boilerplate DTOs and service structures
-- Explaining Entity Framework Core migration issues
-- Suggesting UI/UX improvements
-- Assisting with SignalR real-time communication setup
-- Helping optimize abuse detection logic
+Total AI sessions:        ~40 interactions
+Primary AI tools used:
+- Claude (Anthropic)
+- ChatGPT (OpenAI)
+Languages assisted:       C#, JavaScript (React), SQL, JSON
+Main areas of assistance: Backend services, middleware,
+                          frontend components, AWS deployment, debugging
 
-All generated suggestions were reviewed, modified, tested, and integrated manually into the project.
+--------------------------------------------------------------------------------
+SESSION 1 — Project Planning & Technology Selection
 
-Author: Besiana Dauti
+PROMPT:
+  I am a Cloud Computing student. My assignment topic is API Rate Limiting
+  and Abuse Protection. Requirements: per-user limits, request logging,
+  admin override, and clear client error responses. I want to use ASP.NET
+  Core, SQL Server, JWT, and React. What technologies should I use and
+  what can I build as a real application?
+
+OUTPUT RECEIVED:
+  Claude suggested building an "API Gateway / Protection Service" — a platform
+  where developers register, get an API key, and use it to protect their own
+  APIs. Suggested stack: ASP.NET Core 9, Entity Framework Core 9, SQL Server,
+  JWT, BCrypt, React + Vite, Axios, and AWS for deployment.
+  Also proposed Subscription Plans (Free/Pro/Enterprise) as a business model.
+
+HOW USED:
+  Adopted the full concept of RateLimiter Pro as a SaaS-style platform.
+  Used the suggested tech stack exactly as recommended.
+  The subscription plan idea was implemented with Stripe integration.
+
+MODIFICATIONS:
+  Added API Keys System (not in original suggestion).
+  Added Abuse Detection with Risk Scoring (not in original suggestion).
+  Added SignalR for real-time dashboard updates.
+
+--------------------------------------------------------------------------------
+SESSION 2 - Models Creation
+
+PROMPT:
+  Create all models for RateLimiterApi: User, RequestLog, ApiKey, Plan,
+  Subscription, SuspiciousActivity. User needs: Id, FullName, Email,
+  PasswordHash, Role, RateLimit, IsBlocked, CreatedAt, PlanId, RiskScore,
+  FailedLoginAttempts, LockedUntil, StripeCustomerId, and navigation
+  properties for ApiKeys, SuspiciousActivities, Subscription.
+
+OUTPUT RECEIVED:
+  Complete model classes for all 6 entities with proper navigation
+  properties, default values, and nullable types where appropriate.
+
+HOW USED:
+  Used as provided. Added ICollection<ApiKey> and ICollection<SuspiciousActivity>
+  to User model after separate sessions discussing those features.
+
+MODIFICATIONS:
+  Added StripeCustomerId and Subscription navigation after Stripe session.
+  Added FailedLoginAttempts and LockedUntil after brute force session.
+  Added RiskScore after abuse detection session.
+
+--------------------------------------------------------------------------------
+SESSION 3 - DTOs
+
+PROMPT:
+  Create all DTOs: RegisterDto, LoginDto, AuthResponseDto (with Id),
+  UserInfoDto, BlockUserDto, UpdateRateLimitDto, CreateApiKeyDto,
+  ApiKeyResponseDto, PlanResponseDto, UpdateUserPlanDto,
+  ApiResponseDto<T> with static Ok() and Fail() methods.
+
+OUTPUT RECEIVED:
+  Complete DTO classes in correct namespaces. ApiResponseDto<T> used
+  generics with static helper methods returning typed responses.
+
+HOW USED:
+  Used exactly as provided across all controllers and services.
+
+ISSUE ENCOUNTERED:
+  ApiResponseDto<T> showed error "type T could not be found" due to
+  incorrect namespace. Claude identified it was a namespace mismatch
+  (RateLimiterAPI vs RateLimiterApi) and provided the fix.
+
+--------------------------------------------------------------------------------
+SESSION 4 — AuthService with Brute Force Protection
+
+PROMPT:
+  Create AuthService with RegisterAsync and LoginAsync. LoginAsync should
+  track failed attempts, lock account for 2 minutes after 5 failures,
+  return tuple (AuthResponseDto?, string? error) with exact error message
+  including attempts remaining.
+
+OUTPUT RECEIVED:
+  Complete AuthService with BCrypt password verification, FailedLoginAttempts
+  counter, LockedUntil timestamp, and descriptive error messages like
+  "Invalid email or password. 3 attempt(s) remaining before lockout."
+
+HOW USED:
+  Used as provided. AuthController updated to read the error string from
+  the tuple and return it directly in the 401 response.
+
+--------------------------------------------------------------------------------
+SESSION 5 - TokenService
+
+PROMPT:
+  Create TokenService that reads JWT settings from environment variables.
+  Include GenerateToken and ValidateToken methods. Claims: NameIdentifier,
+  Email, Name, Role.
+
+OUTPUT RECEIVED:
+  Complete TokenService using SymmetricSecurityKey, HmacSha256 algorithm,
+  JwtSecurityTokenHandler with full validation parameters.
+
+HOW USED:
+  Used exactly as provided.
+
+--------------------------------------------------------------------------------
+SESSION 6 - RateLimitService (Fixed Window)
+
+PROMPT:
+  Create RateLimitService using Fixed Window algorithm. Methods:
+  IsRateLimitedAsync, LogRequestAsync, GetRemainingRequestsAsync,
+  GetResetTimeInSecondsAsync. Use RequestLogs table with Timestamp.
+
+OUTPUT RECEIVED:
+  Service counting requests with DateTime.UtcNow.AddMinutes(-1) window,
+  comparing to user.RateLimit. GetResetTimeInSecondsAsync finds the
+  oldest request in the window and calculates remaining seconds.
+
+HOW USED:
+  Used exactly as provided. This is the core rate limiting logic.
+
+DISCUSSION:
+  Asked Claude about the difference between Fixed Window, Sliding Window,
+  Token Bucket, and Leaky Bucket algorithms. Claude explained:
+  - Fixed Window: simple, low memory, has boundary burst problem
+  - Token Bucket: gradual refill, used by AWS/Stripe, more user-friendly
+  - Sliding Window: most accurate, higher memory usage
+  Decision: kept Fixed Window for simplicity, noted Token Bucket as the
+  recommended production alternative in the presentation.
+
+--------------------------------------------------------------------------------
+SESSION 7 - ApiKeyService
+
+PROMPT:
+  Create ApiKeyService. GenerateKey should use prefix "rl_live_" with
+  32 random chars from RandomNumberGenerator. Max 5 active keys per user.
+  Include ValidateKeyAsync that checks IsActive and ExpiresAt, updates
+  LastUsedAt on each use.
+
+OUTPUT RECEIVED:
+  Complete service with all CRUD methods and private GenerateKey() using
+  Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).
+
+HOW USED:
+  Used exactly as provided.
+
+--------------------------------------------------------------------------------
+SESSION 8 - AbuseDetectionService
+
+PROMPT:
+  Create AbuseDetectionService with IsBurstTrafficAsync (50+ req in 10s),
+  CalculateRiskScoreAsync (scoring: burst +40, high 429 +30, moderate 429
+  +15, endpoint scanning +20, IP sharing +10), AnalyzeAndActAsync
+  (auto-ban at 80+), GetSuspiciousActivitiesAsync, ResetRiskScoreAsync.
+
+OUTPUT RECEIVED:
+  Complete service with all methods. Auto-ban sets IsBlocked=true and
+  creates SuspiciousActivity record. Warning logged for scores 50-79.
+
+HOW USED:
+  Used as provided. Burst limit later changed from 50 to 200 to prevent
+  false positives from the real-time dashboard polling.
+
+MODIFICATION:
+  Changed burst threshold from 50 to 200 requests in 10 seconds after
+  discovering that frequent dashboard status checks were triggering
+  the burst detection and blocking the admin account during testing.
+
+--------------------------------------------------------------------------------
+SESSION 9 - StripeService
+
+PROMPT:
+  Create StripeService with CreateCheckoutSessionAsync (create/reuse
+  Stripe Customer, subscription mode, metadata with userId and planId),
+  CancelSubscriptionAsync (CancelAtPeriodEnd=true, do NOT change plan
+  immediately), HandleWebhookAsync (checkout.session.completed,
+  customer.subscription.deleted, customer.subscription.updated).
+
+OUTPUT RECEIVED:
+  Complete StripeService. CancelSubscriptionAsync uses
+  SubscriptionUpdateOptions { CancelAtPeriodEnd = true }.
+  HandleCheckoutCompletedAsync updates user plan and creates/updates
+  Subscription record. HandleSubscriptionDeletedAsync downgrades to Free.
+
+ISSUES ENCOUNTERED:
+  1. 'Subscription' does not contain a definition for 'CurrentPeriodEnd'
+     Claude investigated and found that Stripe.net version varies.
+     Solution: added StripeSubscriptionExtensions static class that
+     parses StripeResponse.Content JSON to extract current_period_end
+     unix timestamp, with fallback to StartDate + 1 month.
+
+  2. CancelSubscription was immediately setting plan to Free.
+     Claude identified the bug: plan change was happening synchronously
+     in CancelSubscriptionAsync. Fixed by removing the plan change
+     from cancel method and only applying it in
+     HandleSubscriptionDeletedAsync (triggered by Stripe webhook
+     after the billing period ends).
+
+HOW USED:
+  Used with modifications described above.
+
+--------------------------------------------------------------------------------
+SESSION 10 - RateLimitMiddleware
+
+PROMPT:
+  Create RateLimitMiddleware that: skips auth/swagger/hubs/status/risk-score
+  paths, authenticates via X-API-Key OR JWT, returns JSON 401/429 errors,
+  adds headers via OnStarting callback, logs after _next(), sends SignalR
+  StatusUpdate and RiskScoreUpdate to user group after each request.
+  Inject IHubContext<DashboardHub> in constructor.
+
+OUTPUT RECEIVED:
+  Complete middleware. Used OnStarting for headers to prevent
+  "Headers are read-only" exception. SignalR sends to group "user_{userId}".
+
+ISSUES ENCOUNTERED:
+  1. "Headers are read-only, response has already started" — trying to add
+     headers after response started. Claude fixed with OnStarting callback.
+
+  2. ERR_INCOMPLETE_CHUNKED_ENCODING — caused by async operations in
+     OnStarting. Fixed by moving heavy async calls (GetRemainingRequests,
+     GetRiskScore) outside OnStarting and only doing the lightweight
+     TryAdd inside.
+
+  3. Dashboard status requests consuming rate limit — /data/status was
+     being counted every 1 second. Fixed by adding path exclusions for
+     /data/status and /data/risk-score in the middleware skip list.
+
+HOW USED:
+  Used with all three fixes applied.
+
+--------------------------------------------------------------------------------
+SESSION 11 - DashboardHub
+
+PROMPT:
+  Create SignalR DashboardHub with JoinUserGroup and LeaveUserGroup methods.
+  Register at /hubs/dashboard in Program.cs.
+
+OUTPUT RECEIVED:
+  Simple hub class using Groups.AddToGroupAsync and RemoveFromGroupAsync.
+
+HOW USED:
+  Used exactly as provided.
+
+
+SESSION 12 - React Project Setup
+
+PROMPT:
+  Set up React + Vite frontend with React Router, Axios, and @microsoft/signalr.
+  Structure: pages/, components/, services/. Dark green theme.
+
+OUTPUT RECEIVED:
+  npm commands, folder structure, and base App.jsx with all routes
+  including protected routes for admin and regular users.
+
+HOW USED:
+  Used as provided. ESLint errors were addressed by disabling StrictMode
+  and using useCallback with proper dependency arrays.
+
+--------------------------------------------------------------------------------
+SESSION 13 - Dashboard.jsx with SignalR
+
+PROMPT:
+  Create Dashboard.jsx with SignalR real-time updates. Countdown timer
+  must run locally (no requests). Status fetch only once + on SignalR
+  events. Polling fallback every 10s if SignalR fails. Show Live/Polling
+  badge. 4 cards with progress bars and color coding.
+
+OUTPUT RECEIVED:
+  Complete dashboard with SignalR HubConnectionBuilder, automatic reconnect,
+  fallback polling, local countdown with setInterval, and 4 responsive cards.
+
+ISSUES ENCOUNTERED:
+  1. Dashboard was making 1 request/second consuming the rate limit.
+     Fixed by: (a) excluding /data/status from middleware rate counting,
+     (b) changing polling interval to 10 seconds, (c) making countdown
+     run purely locally with setInterval without any API calls.
+
+  2. SignalR connection failed in production (AWS HTTP vs HTTPS mismatch).
+     Resolved by using HTTP URL and relying on polling fallback.
+
+HOW USED:
+  Used with both fixes applied.
+
+--------------------------------------------------------------------------------
+SESSION 14 - AWS Elastic Beanstalk Deployment
+
+PROMPT:
+  How do I deploy ASP.NET Core 9 to AWS Elastic Beanstalk?
+
+OUTPUT RECEIVED:
+  Step-by-step guide: publish → create Procfile → create ZIP → upload.
+  Specific warning about using ZipFile.CreateFromDirectory instead of
+  Compress-Archive to avoid Windows backslash path issues on Linux.
+
+ISSUES ENCOUNTERED:
+  1. "backslashes as path separators" error — ZIP was created with
+     Compress-Archive which uses Windows paths. Fixed by using
+     System.IO.Compression.ZipFile.CreateFromDirectory.
+
+  2. 502 Bad Gateway — application not listening on correct port.
+     Fixed by removing manual app.Urls.Add() — AWS Elastic Beanstalk
+     manages port assignment automatically via PORT env variable.
+
+  3. 404 on /swagger — Swagger was inside if(Development) block.
+     Fixed by moving UseSwagger() and UseSwaggerUI() outside the
+     environment check so they always activate.
+
+  4. SQL Server connection failed — RDS Security Group did not allow
+     inbound traffic on port 1433. Fixed by adding MSSQL inbound rule
+     in AWS Security Group.
+
+HOW USED:
+  Used with all 4 fixes applied. Successfully deployed on attempt 5 (v5).
+
+--------------------------------------------------------------------------------
+SESSION 15 - AWS S3 Frontend Deployment
+
+PROMPT:
+  How do I deploy React to AWS S3 as a static website?
+
+OUTPUT RECEIVED:
+  Steps: create bucket → disable block public access → enable static hosting
+  → upload dist/ → add bucket policy. Noted that error document must also
+  be index.html for React Router SPA to work on direct URL access.
+
+ISSUES ENCOUNTERED:
+  "Policy has invalid resource" — bucket policy used wrong ARN.
+  S3 bucket with Account Regional Namespace has a suffix in the ARN
+  (includes account ID and region). Fix: copied exact ARN from S3
+  Properties page and appended /* for the resource path.
+
+HOW USED:
+  Used with ARN fix applied.
+
+--------------------------------------------------------------------------------
+SESSION 16 - CORS Issues After Deployment
+
+PROMPT:
+  After deploying frontend to S3 and API to Elastic Beanstalk, I get
+  CORS errors. Frontend is on HTTP S3 URL, API is on HTTP EB URL.
+
+OUTPUT RECEIVED:
+  Two causes identified:
+  1. S3 origin not in CORS AllowedOrigins list in Program.cs
+  2. Todo App running on localhost:5174 not in list
+  Fix: Add S3 URL and all localhost variants. Alternatively use
+  AllowAnyOrigin() for development.
+
+HOW USED:
+  Added S3 bucket URL to CORS policy. Redeployed API.
+
+--------------------------------------------------------------------------------
+SESSION 17 - Stripe Webhook Configuration
+
+PROMPT:
+  How do I configure Stripe webhooks for AWS production? I used Stripe CLI
+  locally. Now the API is on Elastic Beanstalk.
+
+OUTPUT RECEIVED:
+  Explanation that Stripe CLI webhook secret (whsec_...) is only valid for
+  local forwarding. For production, must create a new endpoint in
+  Stripe Dashboard → Developers → Webhooks pointing to the EB URL.
+  New endpoint generates a different signing secret that must be set
+  as STRIPE_WEBHOOK_SECRET in EB environment variables.
+
+HOW USED:
+  Created webhook endpoint in Stripe Dashboard. Updated STRIPE_WEBHOOK_SECRET
+  in Elastic Beanstalk environment properties. Redeployed.
+
+--------------------------------------------------------------------------------
+SESSION 18 - Todo App Demo
+
+PROMPT:
+  Create a simple React Todo App that demonstrates API Key usage. No backend.
+  Show remaining requests from response headers. Each todo = 1 API request.
+  Show 429 error with countdown. API key entered by user (not hardcoded).
+
+OUTPUT RECEIVED:
+  Minimal React app (~150 lines) using only useState and axios.
+  Reads X-RateLimit-Remaining and X-RateLimit-Reset from response headers.
+
+ISSUES ENCOUNTERED:
+  401 Unauthorized — Todo App was using HTTPS URL but API is on HTTP.
+  Fix: changed API_URL from https:// to http://
+
+HOW USED:
+  Used with HTTP URL fix. Demonstrated successfully at the end of
+  the project to show how any application can integrate rate limiting
+  with a single API key.
+
+--------------------------------------------------------------------------------
+SESSION 39 - Debugging & Minor Fixes
+
+Various small debugging sessions:
+
+1. EF Core migration error "EnableRetryOnFailure" — SQL Server connection
+   failing on startup. Added EnableRetryOnFailure(5, 30s, null) to
+   DbContext configuration.
+
+2. useEffect dependency warnings in React — multiple ESLint warnings about
+   fetchStatus not in dependency array. Fixed with useCallback and proper
+   dependency declarations.
+
+3. "Cannot access variable before it is declared" for fetchStatus in
+   Dashboard — function was declared after useEffect that called it.
+   Fixed by moving function declaration above useEffect.
+
+4. "Calling setState synchronously within an effect" — ESLint warning.
+   Resolved by disabling the specific ESLint rule with comment or
+   restructuring with useCallback.
+
+5. Stripe CurrentPeriodEnd property not found — Stripe.net version
+   variation. Fixed by writing StripeSubscriptionExtensions class that
+   parses the raw StripeResponse.Content JSON.
+
+OVERALL ASSESSMENT OF AI ASSISTANCE
+
+AI assistance was most valuable for:
+
+  1. ARCHITECTURE DECISIONS — Helping decide between Fixed Window vs Token
+     Bucket, polling vs SignalR, JWT vs API Keys, and when to use which.
+
+  2. DEBUGGING — Identifying the root causes of errors that were not
+     immediately obvious (e.g. the useState re-render clearing the login
+     error, the backslash ZIP issue on Linux, the CORS auth endpoint fix).
+
+  3. BOILERPLATE GENERATION — Services, controllers, and DTOs that follow
+     consistent patterns were generated quickly and correctly.
+
+  4. AWS GUIDANCE — Deployment steps for Elastic Beanstalk, RDS, and S3
+     which required specific configuration knowledge.
+
+  5. STRIPE INTEGRATION — Webhook handling, CancelAtPeriodEnd pattern,
+     and the difference between Stripe CLI secrets vs Dashboard secrets.
+
+All AI-generated code was:
+  - Reviewed and understood before use
+  - Tested locally and in production
+  - Modified where project-specific requirements differed
+  - Debugged through further AI interaction when issues arose
+
+The core business logic (rate limiting algorithm, risk scoring thresholds,
+abuse detection patterns) was designed by myself and implemented with
+AI assistance for the technical syntax.
